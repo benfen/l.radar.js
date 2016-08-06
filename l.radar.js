@@ -75,7 +75,7 @@ L.Radar = L.Path.extend({
 
         if (crs.distance === L.CRS.Earth.distance) {
             var d = Math.PI / 180,
-            latR = (radarDescriptor._mRadius / L.CRS.Earth.R) / d,
+                latR = (radarDescriptor._mRadius / L.CRS.Earth.R) / d,
                 top = map.project([lat + latR, lng]),
                 bottom = map.project([lat - latR, lng]),
                 p = top.add(bottom).divideBy(2),
@@ -158,7 +158,7 @@ L.radar = function (latlng, options) {
 };
 
 // @factory L.Radar.radarDescriptor(minorRadius: Number, majorRadius: Number, startAngle: Number, endAngle: Number): RadarDescriptor
-// Creates a new instance of a RadarDescriptor for defining a radar object
+// Creates a new instance of a RadarDescriptor for defining a radar object.
 L.Radar.radarDescriptor = function (minorRadius, majorRadius, startAngle, endAngle) {
     function RadarDescriptor(minorRadius, majorRadius, startAngle, endAngle) {
         var self = this;
@@ -168,6 +168,7 @@ L.Radar.radarDescriptor = function (minorRadius, majorRadius, startAngle, endAng
         self._nRadius = self._minorRadius;
         self._startAngle = startAngle || 0;
         self._endAngle = endAngle || 0;
+        self._middleAngle = (self._startAngle + self._endAngle) / 2;
         self.type = "RadarDescriptor";
 
         // @method getPath(p: Point): String
@@ -175,34 +176,33 @@ L.Radar.radarDescriptor = function (minorRadius, majorRadius, startAngle, endAng
         self.getPath = function(p) {
             var minorRadius = this._minorRadius;
             var majorRadius = this._majorRadius;
-            var majorArc = (endAngle - startAngle) > Math.PI ? 1 : 0;
-            var firstVertex = {
-                x: minorRadius * Math.cos(this._startAngle) + p.x,
-                y: minorRadius * Math.sin(this._startAngle) + p.y
-            };
 
-            var secondVertex = {
-                x: majorRadius * Math.cos(this._startAngle) + p.x,
-                y: majorRadius * Math.sin(this._startAngle) + p.y
-            };
+            var v1 = createVertex(minorRadius, this._startAngle, p);
+            var v2 = createVertex(majorRadius, this._startAngle, p);
+            var v3 = createVertex(majorRadius, this._middleAngle, p);
+            var v4 = createVertex(majorRadius, this._endAngle, p);
+            var v5 = createVertex(minorRadius, this._endAngle, p);
+            var v6 = createVertex(minorRadius, this._middleAngle, p);
 
-            var thirdVertex = {
-                x: majorRadius * Math.cos(this._endAngle) + p.x,
-                y: majorRadius * Math.sin(this._endAngle) + p.y
-            };
+            return 'M ' + v1.x + ' ' + v1.y + ' ' +
+                'L ' + v2.x + ' ' + v2.y + ' ' +
+                'A ' + majorRadius + ' ' + majorRadius + ' 0 0 1 ' +
+                v3.x + ' ' + v3.y + ' ' +
+                'A ' + majorRadius + ' ' + majorRadius + ' 0 0 1 ' +
+                v4.x + ' ' + v4.y + ' ' +
+                'L ' + v5.x + ' ' + v5.y + ' ' +
+                'A ' + minorRadius + ' ' + minorRadius + ' 0 0 0 ' +
+                v6.x + ' ' + v6.y + ' ' +
+                'A ' + minorRadius + ' ' + minorRadius + ' 0 0 0 ' +
+                v1.x + ' ' + v1.y +
+                ' Z';
+        }
 
-            var fourthVertex = {
-                x: minorRadius * Math.cos(this._endAngle) + p.x,
-                y: minorRadius * Math.sin(this._endAngle) + p.y
+        function createVertex(radius, angle, point) {
+            return {
+                x: radius * Math.cos(angle) + point.x,
+                y: radius * Math.sin(angle) + point.y
             };
-
-            return 'M ' + firstVertex.x + ' ' + firstVertex.y + ' ' +
-                'L ' + secondVertex.x + ' ' + secondVertex.y + ' ' +
-                'A ' + majorRadius + ' ' + majorRadius + ' 0 ' + majorArc + ' 1 ' +
-                thirdVertex.x + ' ' + thirdVertex.y + ' ' +
-                'L ' + fourthVertex.x + ' ' + fourthVertex.y + ' ' +
-                'A ' + minorRadius + ' ' + minorRadius + ' 0 ' + majorArc + ' 0 ' +
-                firstVertex.x + ' ' + firstVertex.y;
         }
     }
 
